@@ -43,3 +43,22 @@ class UserUpdate(forms.Form):
     
 class ProfileUpdate(forms.Form) :
     image = forms.ImageField(required=False)
+    
+class LoginForm(forms.Form):
+    username = forms.CharField(max_length=100)
+    password = forms.CharField(widget=forms.PasswordInput)
+    
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if not username:
+            raise forms.ValidationError("Username is Required")
+        return username
+    
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        if not password:
+            raise forms.ValidationError("Password is Required")
+        return password
+    
+
+    

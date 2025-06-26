@@ -1,9 +1,11 @@
-from django.shortcuts import render,get_object_or_404
+from django.shortcuts import render,get_object_or_404,redirect
 from django.http import HttpResponse
 from .models import Post
 from django.views.generic import ListView,DetailView,CreateView,UpdateView,DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin,UserPassesTestMixin
 from django.contrib.auth.models import User
+from .forms import PostCreate,PostUpdate
+from django.contrib.auth.decorators import login_required
 # Create your views here.
 
 
@@ -35,32 +37,6 @@ class UserPostListView(ListView):
 class PostDetailView(DetailView):
     model = Post
 
-class PostCreateView(LoginRequiredMixin,CreateView):
-    model = Post
-    fields = [
-        'title',
-        'content'
-    ]
-    def form_valid(self,form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
-
-class PostUpdateView(LoginRequiredMixin,UserPassesTestMixin,UpdateView):
-    model = Post
-    fields = [
-        'title',
-        'content'
-    ]
-    def form_valid(self,form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
-
-    def test_func(self):
-        post = self.get_object()
-        if self.request.user == post.author:
-            return True
-        else:
-            return False    
 
 class PostDeleteView(LoginRequiredMixin,UserPassesTestMixin,DeleteView):
     model = Post
@@ -75,3 +51,31 @@ class PostDeleteView(LoginRequiredMixin,UserPassesTestMixin,DeleteView):
 def about(request):
     return render(request,'blog/about.html',{'title': 'About'})
 
+@login_required
+def CustomPostCreate(request):
+    if request.method == 'POST':
+        form = PostCreate(request.POST)
+        if form.is_valid():
+            title = form.cleaned_data.get('title')
+            content = form.cleaned_data.get('content')
+            author = request.user
+            post = Post(title=title,content=content,author=author)
+            post.save()
+            return redirect('blog-home')
+    else:
+        form = PostCreate()
+    return render(request,'blog/post_form.html',{'form':form})
+
+def CustomPostUpdate(request,pk):
+    post = get_object_or_404(Post,pk=pk)
+    if request.method == 'POST':
+        form = PostUpdate(request.POST)
+        if form.is_valid():
+            post.title = form.cleaned_data.get('title')
+            post.content = form.cleaned_data.get('content')
+            post.save()
+            return redirect('post-detail',pk=post.pk)
+    else:
+        form = PostUpdate(initial={'title': post.title, 'content': post.content})
+
+    return render(request, 'blog/post_update.html', {'form': form})

@@ -1,7 +1,8 @@
 from django.shortcuts import render,redirect
 from django.contrib import messages
+from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
-from .forms import UserRegisterForm,UserUpdateForm,ProfileUpdateForm,RegisterForm,UserUpdate,ProfileUpdate
+from .forms import UserRegisterForm,UserUpdateForm,ProfileUpdateForm,RegisterForm,UserUpdate,ProfileUpdate,LoginForm
 # Create your views here.
 # def register(request):
 #     if request.method == 'POST':
@@ -31,6 +32,30 @@ def register(request):
     else:
         form = RegisterForm()
     return render(request,'users/register.html',{'form':form,'title':'Register'})
+
+def CustomLoginView(request):
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(request,username=username,password=password)
+            if user is not None:
+                messages.success(request,f'Login Successful.Welcome {username}')
+                login(request,user)
+                return redirect('blog-home')
+                
+            else:
+                form.add_error(None,'Invalid Username or Password')
+    else:
+        form = LoginForm()
+    return render(request,'users/login.html',{'form':form})
+
+def CustomLogoutView(request):
+    if request.method=='POST':
+        logout(request)
+        return redirect('logout')
+    return render(request,'users/logout.html')
 
 # @login_required
 # def profile(request):
