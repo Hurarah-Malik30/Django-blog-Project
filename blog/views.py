@@ -6,51 +6,70 @@ from django.contrib.auth.mixins import LoginRequiredMixin,UserPassesTestMixin
 from django.contrib.auth.models import User
 from .forms import PostCreate,PostUpdate
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.contrib import messages
 # Create your views here.
-
-
-def home(request):
-    context = {
-        'posts':Post.objects.all(),
-        # 'title':'My Blog'
-    }
-    return render(request,'blog/home.html',context)
-
-class PostListView(ListView):
-    model = Post
-    template_name = 'blog/home.html'
-    context_object_name = 'posts'
-    ordering = ['-date_posted']
-    paginate_by = 5
-
-
-class UserPostListView(ListView):
-    model = Post
-    template_name = 'blog/user_posts.html'
-    context_object_name = 'posts'
-    paginate_by = 5
-
-    def get_queryset(self):
-        user = get_object_or_404(User,username=self.kwargs.get('username'))
-        return Post.objects.filter(author=user).order_by('-date_posted')
-
-class PostDetailView(DetailView):
-    model = Post
-
-
-class PostDeleteView(LoginRequiredMixin,UserPassesTestMixin,DeleteView):
-    model = Post
-    success_url = '/'
-    def test_func(self):
-        post = self.get_object()
-        if self.request.user == post.author:
-            return True
-        else:
-            return False    
+ 
 
 def about(request):
     return render(request,'blog/about.html',{'title': 'About'})
 
+def CustomPostListView(request):
+    posts = Post.objects.all().order_by('-date_posted')
+    paginator = Paginator(posts,5)
+    page_num = request.GET.get('page')
+    page_obj = paginator.get_page(page_num)
+    is_paginated = page_obj.has_other_pages()
+    context = {
+        'posts':page_obj,
+        'title': "CustomListView",
+        'is_paginated':is_paginated
+    }
+    return render(request,'blog/home.html',context)
+
+def CustomUserPostListView(request,username):
+    user = get_object_or_404(User,username=username)
+    posts = Post.objects.filter(author=user).order_by('-date_posted')
+    paginator = Paginator(posts,5)
+    page_num = request.GET.get('page')
+    page_obj = paginator.get_page(page_num)
+    is_paginated = page_obj.has_other_pages()
+    context ={
+        'title': "Custom User Posts",
+        'username':user,
+        'is_paginated':is_paginated,
+        'posts': page_obj
+    }
+    return render(request,'blog/user_posts.html',context)
+
+def CustomDetailPostView(request,pk):
+    post = get_object_or_404(Post,pk=pk)
+    context ={
+        'title': "CustomPostforpk",
+        'object':post
+    }
+    return render(request,'blog/post_detail.html',context)
+
+
+def CustomPostDeleteView(request,pk):
+    post = get_object_or_404(Post,pk=pk)
+    
+    if post.author != request.user:
+        messages.error(request,'You are not authorised to delete this post')
+        return redirect('post_detail',pk=pk)
+    
+    if request.method == 'POST':
+        post.delete()
+        messages.success(request,'Post Deleted Successfully.')
+        return redirect('blog-home')
+    
+    context = {
+        'post':post
+    }  
+    return render(request, 'blog/post_confirm_delete.html', context)
+    
+    
+    
 @login_required
 def CustomPostCreate(request):
     if request.method == 'POST':

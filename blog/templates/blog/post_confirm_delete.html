@@ -9,8 +9,11 @@
                     <h2>Are You Sure You Want to Delete The Post "{{object.title}}"</h2>
                 </fieldset>
                 <div class="form-group">
-                    <button class="btn btn-danger" type="submit">Delete</button>
-                    <a class="btn btn-success" href="{%url 'post-detail' object.id%}">Cancel</a>
+                   <form method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                        <a href="{% url 'post-detail' post.pk %}" class="btn btn-secondary">Cancel</a>
+                    </form>
                 </div>
             </form>
         </div>
